@@ -1,6 +1,6 @@
 import struct
 try:
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
 except:
     from adafruit_datetime import datetime, timedelta
 
@@ -163,7 +163,7 @@ def encode_datetime(curr_time, buf):
     return buf
 
 def decode_datetime(buf):
-    _epoch = datetime(2023, 3, 1, 0, 0, 0)
+    _epoch = datetime(2023, 3, 1, 0, 0, 0, tzinfo=timezone.utc)
     try:
         dt_sec = timedelta(seconds=struct.unpack("f", buf[0:4])[0])
     except:
