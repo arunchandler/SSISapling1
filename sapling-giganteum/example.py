@@ -1,4 +1,3 @@
-import csv
 import json
 
 import pandas as pd
@@ -75,7 +74,7 @@ with open('gmat_gps.gmd', 'w+') as g:
             x, y, z = (geodetic_to_ecef(lat, lon, alt))
             dt = tu.decode_datetime(time_buf)
             dt_fmt = dt.strftime('%y-%m-%d %H:%M:%S')
-            print(dt_fmt, x, y, z)
+            print(dt_fmt, x, y, z, np.linalg.norm([x, y, z]))
             mjd = utc_to_tai_mjd(dt)
             new_entry = [mjd, "GPS_PosVec", 9014, 800, x, y, z]
             
