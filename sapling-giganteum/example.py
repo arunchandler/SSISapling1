@@ -42,7 +42,6 @@ def geodetic_to_ecef(lat, lon, alt):
 
     return x, y, z
 
-
 def utc_to_tai_mjd(utc_dt):
     # TAI-UTC offset in seconds
     tai_utc_offset = 37.0  # as of 2023
@@ -56,35 +55,52 @@ def utc_to_tai_mjd(utc_dt):
 
     return mjd
 
+def format_skygraph(x, y, z, dt):
+    return f"{dt.strftime('%y%j%H%M%S.%f')} {x:.6f} {y:.6f} {z:.6f}"
 
-with open('gmat_gps.gmd', 'w+') as g:
-    for index, row in df.iterrows():
-        # Get values from specific columns by name
-        gps_enc = json.loads(row['gps'])
-        for j in range(6):
-            gps_buf[j] = gps_enc[j]
+def format_NASA(x, y, z):
+    # Mean Equator J2000.0
+    # YYDDDHHMMSS.SSS X Y Z VX VY VZ
+    return f"{x:.6f} {y:.6f} {z:.6f}"
 
-        time_enc = json.loads(row['gpsTime'])
-        for j in range(4):
-            time_buf[j] = time_enc[j]
-        
-        # GPS telemetry is 255, 255, 255, 255, 255, 255 if no fix
-        if gps_enc != [255, 255, 255, 255, 255, 255] and time_enc != [255, 255, 255, 255]:
-            lat, lon, alt = tu.decode_gps(gps_buf)
-            x, y, z = (geodetic_to_ecef(lat, lon, alt))
-            dt = tu.decode_datetime(time_buf)
-            dt_fmt = dt.strftime('%y-%m-%d %H:%M:%S')
-            mjd = utc_to_tai_mjd(dt)
-            new_entry = [mjd, "GPS_PosVec", 9014, 800, x, y, z]
+def format_GMAT(x, y, z, dt):
+    mjd = utc_to_tai_mjd(dt)
+    return [mjd, "GPS_PosVec", 9014, 800, x, y, z]
+
+
+def main(args):
+
+    with open('gmat_gps.gmd', 'w+') as g:
+        for index, row in df.iterrows():
+            # Get values from specific columns by name
+            gps_enc = json.loads(row['gps'])
+            for j in range(6):
+                gps_buf[j] = gps_enc[j]
+
+            time_enc = json.loads(row['gpsTime'])
+            for j in range(4):
+                time_buf[j] = time_enc[j]
             
-            if len(output) > 0 and new_entry != output[-1]:
-                output.append(new_entry)
-            elif len(output) == 0:
-                output.append(new_entry)
+            # GPS telemetry is 255, 255, 255, 255, 255, 255 if no fix
+            if gps_enc != [255, 255, 255, 255, 255, 255] and time_enc != [255, 255, 255, 255]:
+                lat, lon, alt = tu.decode_gps(gps_buf)
+                x, y, z = (geodetic_to_ecef(lat, lon, alt))
+                dt = tu.decode_datetime(time_buf)
+                dt_fmt = dt.strftime('%y-%m-%d %H:%M:%S')
+                
+                if args.nasa:
+                    new_entry = format_NASA(x, y, z, dt)
+                elif args.gmat:
+                    new_entry = format_GMAT(x, y, z, dt)
+                
+                if len(output) > 0 and new_entry != output[-1]:
+                    output.append(new_entry)
+                elif len(output) == 0:
+                    output.append(new_entry)
 
-    for row in output:
-        str_row = ""
-        for item in row:
-            str_row += str(item) + "    "
-        str_row += "\n"
-        g.write(str_row)
+        for row in output:
+            str_row = ""
+            for item in row:
+                str_row += str(item) + "    "
+            str_row += "\n"
+            g.write(str_row)
